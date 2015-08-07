@@ -3,6 +3,7 @@
 using namespace System;
 
 #include <string>
+
 //You may have to modify these paths.
 #include "../../BESCPP/BESCPP/BasylKeyGenerator.h"
 #include "../../BESCPP/BESCPP/BasylKeyGenerator.cpp"
@@ -10,145 +11,159 @@ using namespace System;
 #include "../../BESCPP/BESCPP/BasylArray.cpp"
 #include "../../BESCPP/BESCPP/PseudorandomGenerator.h"
 #include "../../BESCPP/BESCPP/PseudorandomGenerator.cpp"
+
 //paths end
+using namespace System::Runtime::   InteropServices;
+using namespace                     std;
+namespace                           ManagedBES
+{
+public ref class    ManagedBasylKeyGenerator
+{
+// TODO: Add your methods for this class here.
+public:
+    ManagedBasylKeyGenerator(String ^ pass);
+    ManagedBasylKeyGenerator
+        (
+            String ^
+            pass, int initial, int rounds, int leftoff, int expansion, String ^
+            additionalKey
+        );
+    ManagedBasylKeyGenerator
+        (
+            String ^
+            pass, int initial, int rounds, int leftoff, int expansion, String ^
+            additionalKey, cli::array<byte> ^
+                hash, cli::array<byte> ^
+                key1, cli::array<byte> ^
+                key2, bool encrypted
+        );
 
-using namespace System::Runtime::InteropServices;
-using namespace std;
-namespace ManagedBES {
+    ~ManagedBasylKeyGenerator()
+    {
+        this->!ManagedBasylKeyGenerator();
+    }
 
-	public ref class ManagedBasylKeyGenerator
-	{
-		// TODO: Add your methods for this class here.
-	public:
-		ManagedBasylKeyGenerator(String^ pass);
-		ManagedBasylKeyGenerator(String^ pass, int initial, int rounds, int leftoff, int expansion, String^ additionalKey);
-		ManagedBasylKeyGenerator(String^pass, int initial, int rounds, int leftoff, int expansion, String^ additionalKey, cli::array<byte>^ hash, cli::array<byte>^  key1, cli::array<byte>^ key2, bool encrypted);
+    !ManagedBasylKeyGenerator()
+    {
+        gen->Key1().Drop();
+        gen->Key2().Drop();
+        delete gen;
+    }
 
+    byte    GetRandomByte();
 
-		~ManagedBasylKeyGenerator()
-		{
+    void Encrypt(byte &b)
+    {
+        gen->Encrypt(b);
+    }
 
-			this->!ManagedBasylKeyGenerator();
-		}
+private:
+    BasylKeyGenerator   *gen;
+};
 
-		!ManagedBasylKeyGenerator()
-		{
-			gen->Key1().Drop();
-			gen->Key2().Drop();
-			delete gen;
-		}
+public ref class    ManagedPseudoRandomGenerator
+{
+// TODO: Add your methods for this class here.
+public:
+    ManagedPseudoRandomGenerator() :
+    gen(new PseudoRandomGenerator)
+    {
+    }
 
-		byte GetRandomByte();
+    ManagedPseudoRandomGenerator(int size) :
+    gen(new PseudoRandomGenerator(size))
+    {
+    }
 
-		void Encrypt(byte& b)
-		{
-			
-			gen->Encrypt(b);
-		}
+    ManagedPseudoRandomGenerator (int size, String ^ pass)
+    :
+    gen(nullptr)
+    {
+        IntPtr      ip = Marshal::StringToHGlobalAnsi(pass);
+        const char  *str = static_cast<const char *>(ip.ToPointer());
+        gen = new PseudoRandomGenerator(size, string(str));
+        Marshal::FreeHGlobal(ip);
+    }
+    ManagedPseudoRandomGenerator (int size, String ^ pass, int rounds)
+    :
+    gen(nullptr)
+    {
+        IntPtr      ip = Marshal::StringToHGlobalAnsi(pass);
+        const char  *str = static_cast<const char *>(ip.ToPointer());
+        gen = new PseudoRandomGenerator(size, string(str), rounds);
+        Marshal::FreeHGlobal(ip);
+    }
+    ~ManagedPseudoRandomGenerator()
+    {
+        this->!ManagedPseudoRandomGenerator();
+    }
 
-	private:
-		BasylKeyGenerator* gen;
-		
-	};
+    !ManagedPseudoRandomGenerator()
+    {
+        gen->Drop();
+        delete gen;
+    }
 
-	public ref class ManagedPseudoRandomGenerator
-	{
-		// TODO: Add your methods for this class here.
-	public:
-		ManagedPseudoRandomGenerator() :gen(new PseudoRandomGenerator)
-		{	
-		}
+    byte GetRandomByte()
+    {
+        return gen->GetRandomByte();
+    }
 
-		ManagedPseudoRandomGenerator(int size) : gen(new PseudoRandomGenerator(size))
-		{
-		}
+    void SetSHA(cli::array < unsigned __int8 > ^ hash)
+    {
+        BasylArray<byte> ba(hash->Length);
 
-		ManagedPseudoRandomGenerator(int size, String^ pass) : gen(nullptr)
-		{
-			IntPtr ip = Marshal::StringToHGlobalAnsi(pass);
-			const char* str = static_cast<const char*>(ip.ToPointer());
-			gen = new PseudoRandomGenerator(size, string(str));
-			Marshal::FreeHGlobal(ip);
-		}
-		ManagedPseudoRandomGenerator(int size, String^ pass, int rounds) : gen(nullptr)
-		{
-			IntPtr ip = Marshal::StringToHGlobalAnsi(pass);
-			const char* str = static_cast<const char*>(ip.ToPointer());
-			gen = new PseudoRandomGenerator(size, string(str), rounds);
-			Marshal::FreeHGlobal(ip);
-		}
+        for (int i = 0; i < hash->Length; i++)
+        {
+            ba[i] = hash[i];
+        }
 
-		~ManagedPseudoRandomGenerator()
-		{
-			this->!ManagedPseudoRandomGenerator();
-		}
+        gen->SetSHA(ba);
+    }
 
-		!ManagedPseudoRandomGenerator()
-		{
-			gen->Drop();
-			delete gen;
-		}
+    void SetAdditional(cli::array < unsigned __int8 > ^ additional)
+    {
+        BasylArray<byte> ba(additional->Length);
 
-		byte GetRandomByte()
-		{
-			return gen->GetRandomByte();
-		}
+        for (int i = 0; i < additional->Length; i++)
+        {
+            ba[i] = additional[i];
+        }
 
-		void SetSHA(cli::array<unsigned __int8>^ hash)
-		{
-			BasylArray<byte> ba(hash->Length);
+        gen->SetSHA(ba);
+    }
 
-			for (int i = 0; i < hash->Length; i++)
-			{
-				ba[i] = hash[i];
-			}
-			gen->SetSHA(ba);
-		}
-		
-		void SetAdditional(cli::array<unsigned __int8>^ additional)
-		{
-			BasylArray<byte> ba(additional->Length);
+    void SetRecycleKey(String ^ pass)
+    {
+        IntPtr      ip = Marshal::StringToHGlobalAnsi(pass);
+        const char  *str = static_cast<const char *>(ip.ToPointer());
+        string      pass2(str);
+        Marshal::FreeHGlobal(ip);
 
-			for (int i = 0; i < additional->Length; i++)
-			{
-				ba[i] = additional[i];
-			}
-			gen->SetSHA(ba);
-		}
+        gen->SetRecycleKey(pass2);
+    }
 
+    void SetLeftoff(int amount)
+    {
+        gen->SetLeftoff(amount);
+    }
 
-		void SetRecycleKey(String^ pass)
-		{
-			IntPtr ip = Marshal::StringToHGlobalAnsi(pass);
-			const char* str = static_cast<const char*>(ip.ToPointer());
-			string pass2(str);
-			Marshal::FreeHGlobal(ip);
+    void ExpandKey(int times)
+    {
+        gen->ExpandKey(times);
+    }
 
+    void Recycle()
+    {
+        gen->Recycle();
+    }
 
+    void Drop()
+    {
+        gen->Drop();
+    }
 
-			gen->SetRecycleKey(pass2);
-		}
-
-		void SetLeftoff(int amount)
-		{
-			gen->SetLeftoff(amount);
-		}
-
-		void ExpandKey(int times)
-		{
-			gen->ExpandKey(times);
-		}
-
-		void Recycle()
-		{
-			gen->Recycle();
-		}
-
-		void Drop()
-		{
-			gen->Drop();
-		}
-	private:
-		PseudoRandomGenerator* gen;
-	};
+private:
+    PseudoRandomGenerator   *gen;
+};
 }
